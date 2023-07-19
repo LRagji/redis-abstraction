@@ -1,0 +1,54 @@
+{
+  "name": "redis-abstraction",
+  "version": "0.0.1",
+  "description": "A Redis client pool with abstraction to different Redis libraries.",
+  "main": "index.js",
+  "scripts": {
+    "clean-build": "run-script-os",
+    "copy-files": "run-script-os",
+    "copy-files:linux": "cp ./README.md ./package.json ./package-lock.json ./license.md ./dist/",
+    "copy-files:macos": "cp ./README.md ./package.json ./package-lock.json ./license.md ./dist/",
+    "copy-files:windows": "for %I in (.\\README.md .\\package.json .\\package-lock.json .\\license.md) do copy %I .\\dist\\",
+    "clean-build:macos": "rm -rf ./dist/",
+    "clean-build:linux": "rm -rf ./dist/",
+    "clean-build:windows": "rmdir /s /q .\\dist\\",
+    "test-run": "nyc --reporter=html --reporter=text mocha -r ts-node/register ./tests/**/*.ts",
+    "test": "npm run build && npm run test-run",
+    "build": "(npm run clean-build || node -v) && tsc && npm run copy-files && npm run docs",
+    "redisstop": "docker stop TestCentralStore && ping 127.0.0.1 -c 3",
+    "redisstart": "(npm run redisstop || docker -v ) && docker run --name TestCentralStore -v ${PWD}:\"/var/lib/luatest\" -p 6379:6379 -itd --rm redis:latest",
+    "redisView": "docker run -v redisinsight:/db -p 8001:8001 -itd --rm redislabs/redisinsight:latest",
+    "push": "npm whoami && npm version patch && npm test && cd ./dist && npm publish && cd .. && git push --tags",
+    "docs": "typedoc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LRagji/redis-abstraction.git"
+  },
+  "author": "Laukik",
+  "license": "SEE LICENSE IN license.md",
+  "bugs": {
+    "url": "https://github.com/LRagji/redis-abstraction/issues"
+  },
+  "homepage": "https://github.com/LRagji/redis-abstraction#readme",
+  "keywords": [
+    "cluster",
+    "redis",
+    "client",
+    "abstraction",
+    "Laukik"
+  ],
+  "devDependencies": {
+    "@types/mocha": "^9.1.1",
+    "@types/sinon": "^10.0.15",
+    "cross-env": "^7.0.3",
+    "ioredis": "^5.3.2",
+    "mocha": "^9.2.2",
+    "nyc": "^15.1.0",
+    "run-script-os": "^1.1.6",
+    "sinon": "^15.2.0",
+    "ts-node": "^10.7.0",
+    "typedoc": "^0.22.14",
+    "typescript": "^4.6.3"
+  }
+}
