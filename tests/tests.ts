@@ -462,26 +462,17 @@ describe('RedisClientPool', () => {
     //     })
     // })
 
-    // describe('generateUniqueToken', () => {
-    //     it('should return unique token with prefix from provided prefix', () => {
-    //         const prefix = "task", poolSize = 5;
-    //         const redisStub = sinon.stub();
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         const result = target.generateUniqueToken(prefix);
-    //         assert.strictEqual(result != undefined, true);
-    //         assert.strictEqual(result.split("-")[0], prefix);
-    //     })
-
-    //     it('should return unique token everytime when generateUniqueToken called multiple time', () => {
-    //         const prefix = "task", poolSize = 5, result = new Array<string>();
-    //         const redisStub = sinon.stub();
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         result.push(target.generateUniqueToken(prefix));
-    //         result.push(target.generateUniqueToken(prefix));
-    //         const distinctResult = Array.from(new Set<string>(result));
-    //         assert.strictEqual(result.length, distinctResult.length);
-    //     })
-    // })
+    describe('calling generateUniqueToken', () => {
+        it('should return unique token with prefix provided', () => {
+            const prefix = "task";
+            const target = new IORedisClientPool(redisFactory, 0);
+            const result1 = target.generateUniqueToken(prefix);
+            const result2 = target.generateUniqueToken(prefix);
+            assert.strictEqual(result1.length > (prefix.length + 1), true);
+            assert.strictEqual(result1.split("-")[0], prefix);
+            assert.strictEqual(result2.length > (prefix.length + 1), true);
+            assert.strictEqual(result2.split("-")[0], prefix);
+            assert.notStrictEqual(result1, result2);
+        })
+    })
 });

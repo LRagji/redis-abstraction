@@ -28,9 +28,9 @@ export class IORedisClientPool implements IRedisClientPool {
         return `${prefix}-${randomUUID()}`;
     }
 
-    public async destroy(): Promise<void> {
-        await this.shutdown();
-    }
+    // public async destroy(): Promise<void> {
+    //     await this.shutdown();
+    // }
 
     public async shutdown() {
         const waitHandles = [...this.poolRedisClients, ...Array.from(this.activeRedisClients.values())]
