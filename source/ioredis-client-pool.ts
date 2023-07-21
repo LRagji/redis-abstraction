@@ -1,5 +1,5 @@
 import { IRedisClientPool } from "./i-redis-client-pool";
-import { randomUUID, createHash } from 'node:crypto';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import Redis, { Cluster } from 'ioredis';
 import { parseURL } from 'ioredis/built/utils';
@@ -16,7 +16,9 @@ export class IORedisClientPool implements IRedisClientPool {
     private idlePoolSize: number;
     private totalConnectionCounter = 0;
 
-    constructor(redisConnectionCreator: () => RedisConnection, idlePoolSize = 6) {
+    constructor(redisConnectionCreator: () => RedisConnection, idlePoolSize = 6,
+        private readonly nodeFSModule: typeof fs = fs,
+        private readonly nodeCryptoModule: typeof crypto = crypto) {
         this.poolRedisClients = Array.from({ length: idlePoolSize }, (_) => redisConnectionCreator());
         this.totalConnectionCounter += idlePoolSize;
         this.activeRedisClients = new Map<string, RedisConnection>();
@@ -25,12 +27,8 @@ export class IORedisClientPool implements IRedisClientPool {
     }
 
     public generateUniqueToken(prefix: string) {
-        return `${prefix}-${randomUUID()}`;
+        return `${prefix}-${this.nodeCryptoModule.randomUUID()}`;
     }
-
-    // public async destroy(): Promise<void> {
-    //     await this.shutdown();
-    // }
 
     public async shutdown() {
         const waitHandles = [...this.poolRedisClients, ...Array.from(this.activeRedisClients.values())]
@@ -95,7 +93,7 @@ export class IORedisClientPool implements IRedisClientPool {
         let command = this.filenameToCommand.get(filename);
         // @ts-ignore
         if (command == null || redisClient[command] == null) {
-            const contents = await fs.promises.readFile(filename, { encoding: "utf-8" });
+            const contents = await this.nodeFSModule.promises.readFile(filename, { encoding: "utf-8" });
             command = this.MD5Hash(contents);
             redisClient.defineCommand(command, { lua: contents });
             this.filenameToCommand.set(filename, command);
@@ -103,26 +101,6 @@ export class IORedisClientPool implements IRedisClientPool {
         // @ts-ignore
         return await redisClient[command](keys.length, keys, args);
     }
-
-    // public async defineServerLuaCommand(token: string, contents: string): Promise<string> {
-    //     const redisClient = this.activeRedisClients.get(token);
-    //     if (redisClient == undefined) {
-    //         throw new Error("Please acquire a client with proper token");
-    //     }
-    //     const commandName = this.MD5Hash(contents);
-    //     let serverCommandHash = this.filenameToCommand.get(commandName);
-    //     if (serverCommandHash != null) {
-    //         return serverCommandHash;
-    //         // Is this part needed for replication or cluster mode of redis? need to test before we enable below
-    //         // const existsReply = await redisClient.script("EXISTS", serverCommandHash) as number[];
-    //         // if (existsReply[0] == 1) {
-    //         //     return serverCommandHash;
-    //         // }
-    //     }
-    //     serverCommandHash = await redisClient.script("LOAD", contents) as string;
-    //     this.filenameToCommand.set(commandName, serverCommandHash);
-    //     return serverCommandHash;
-    // }
 
     public info() {
         const returnObj = {
@@ -136,7 +114,7 @@ export class IORedisClientPool implements IRedisClientPool {
     }
 
     private MD5Hash(value: string): string {
-        return createHash('md5').update(value).digest('hex');
+        return this.nodeCryptoModule.createHash('md5').update(value).digest('hex');
     }
 
     public static IORedisClientClusterFactory(connectionDetails: string[], instanceInjection: <T>(c: new (...args: any) => T, args: any[]) => T = createInstance): RedisConnection {

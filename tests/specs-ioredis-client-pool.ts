@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import sinon from 'sinon';
 import { IORedisClientPool } from '../source/index';
-import { randomUUID } from 'node:crypto';
+import crypto from 'node:crypto';
 import fs from 'fs';
 
 describe('RedisClientPool', () => {
@@ -9,6 +9,7 @@ describe('RedisClientPool', () => {
     let redisFactory: sinon.SinonStub;
     const multiResult = "MMockResult";
     const pipelineResult = "PMockResult";
+
     afterEach(() => {
         sinon.resetBehavior();
         sinon.resetHistory();
@@ -18,14 +19,15 @@ describe('RedisClientPool', () => {
     beforeEach(() => {
         redisFactory = sinon.stub().callsFake(() => {
             return {
-                objectId: randomUUID(),
+                objectId: crypto.randomUUID(),
                 quit: sinon.stub().resolves({}),
                 disconnect: sinon.stub(),
                 call: sinon.stub(),
                 multi: sinon.stub().returns({ exec: sinon.stub().returns([[null, multiResult]]) }),
-                pipeline: sinon.stub().returns({ exec: sinon.stub().returns([[null, pipelineResult]]) })
+                pipeline: sinon.stub().returns({ exec: sinon.stub().returns([[null, pipelineResult]]) }),
+                defineCommand: sinon.stub()
             };
-        })
+        });
     })
 
     describe('calling constructor', () => {
@@ -212,54 +214,19 @@ describe('RedisClientPool', () => {
         })
     })
 
-    // describe('defineServerLuaCommand', () => {
-    //     it('should called redis script method when token and contents passed', async () => {
-    //         const redisStub = sinon.stub().returns({ script: sinon.stub().resolves(Math.random().toString()) });
-    //         const poolSize = 5, token = Math.random().toString();
-    //         const contents = `local readFields = redis.call('zrange', KEYS[1], ARGV[1], ARGV[2]) if (#readFields > 0) then return redis.call('hmget', KEYS[2], unpack(readFields)) end`;
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         await target.acquire(token);  //set active redis client for token from existing pool
-    //         const md5Spy = sinon.spy(utils, 'MD5Hash');
-    //         const result = await target.defineServerLuaCommand(token, contents);
-    //         const redisClientStub = redisStub.returnValues[redisStub.returnValues.length - 1];
-    //         sinon.assert.calledOnceWithExactly(redisClientStub.script, "LOAD", contents);
-    //         sinon.assert.calledOnce(md5Spy);
-    //         assert.strictEqual(result != null, true);
-    //     })
-
-    //     it('should not called redis script method when command name already registered', async () => {
-    //         const redisStub = sinon.stub().returns({ script: sinon.stub().resolves(Math.random().toString()) });
-    //         const poolSize = 5, token = Math.random().toString();
-    //         const contents = `local readFields = redis.call('zrange', KEYS[1], ARGV[1], ARGV[2]) if (#readFields > 0) then return redis.call('hmget', KEYS[2], unpack(readFields)) end`;
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         await target.acquire(token);  //set active redis client for token from existing pool
-    //         const md5Spy = sinon.spy(utils, 'MD5Hash');
-    //         await target.defineServerLuaCommand(token, contents); //should register content
-    //         const redisClientStub = redisStub.returnValues[redisStub.returnValues.length - 1];
-    //         sinon.assert.calledOnce(md5Spy);
-    //         sinon.assert.calledOnceWithExactly(redisClientStub.script, "LOAD", contents);
-    //         await target.defineServerLuaCommand(token, contents);
-    //         sinon.assert.calledTwice(md5Spy);
-    //         sinon.assert.calledOnceWithExactly(redisClientStub.script, "LOAD", contents);
-    //     })
-
-    //     it('should throw error when no token found in active redis client', async () => {
-    //         const error = new Error("Please acquire a client with proper token");
-    //         const redisStub = sinon.stub().returns({ script: sinon.stub().resolves(Math.random().toString()) });
-    //         const poolSize = 5, token = Math.random().toString();
-    //         const contents = `local readFields = redis.call('zrange', KEYS[1], ARGV[1], ARGV[2]) if (#readFields > 0) then return redis.call('hmget', KEYS[2], unpack(readFields)) end`;
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         await target.acquire(token);  //set active redis client for token from existing pool
-    //         const md5Spy = sinon.spy(utils, 'MD5Hash');
-    //         assert.rejects(async () => { await target.defineServerLuaCommand("diffrentToken", contents) }, error);
-    //         const redisClientStub = redisStub.returnValues[redisStub.returnValues.length - 1];
-    //         sinon.assert.notCalled(md5Spy);
-    //         sinon.assert.notCalled(redisClientStub.script);
-    //     })
-    // })
+    describe('calling generateUniqueToken', () => {
+        it('should return unique token with prefix provided', () => {
+            const prefix = "task";
+            const target = new IORedisClientPool(redisFactory, 0);
+            const result1 = target.generateUniqueToken(prefix);
+            const result2 = target.generateUniqueToken(prefix);
+            assert.strictEqual(result1.length > (prefix.length + 1), true);
+            assert.strictEqual(result1.split("-")[0], prefix);
+            assert.strictEqual(result2.length > (prefix.length + 1), true);
+            assert.strictEqual(result2.split("-")[0], prefix);
+            assert.notStrictEqual(result1, result2);
+        })
+    })
 
     // describe('info', () => {
     //     it('should return radis connection details with default idle pool size', async () => {
@@ -354,84 +321,70 @@ describe('RedisClientPool', () => {
     //     })
     // })
 
-    // describe('script', () => {
-    //     it('should called redis command method when parameters passed', async () => {
-    //         const command = 'encryptedtext', randomText = Math.random().toString();
-    //         const readFileStub = sinon.stub(fs.promises, 'readFile').resolves(randomText);
-    //         const md5Stub = sinon.stub(utils, 'MD5Hash').returns(command);
-    //         const redisClientStub = { defineCommand: sinon.stub(), [command]: sinon.stub().resolves() };
-    //         const redisStub = sinon.stub().returns(redisClientStub);
-    //         const poolSize = 5, token = Math.random().toString();
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         await target.acquire(token);
-    //         await target.script(token, "filename.txt", ["set"], [0]);
-    //         const activeClientStub = redisStub.returnValues[redisStub.returnValues.length - 1];
-    //         sinon.assert.calledOnceWithExactly(readFileStub, "filename.txt", { encoding: "utf-8" });
-    //         sinon.assert.calledOnceWithExactly(md5Stub, randomText);
-    //         sinon.assert.calledOnceWithExactly(activeClientStub.defineCommand, command, { lua: randomText });
-    //         sinon.assert.calledOnceWithExactly(activeClientStub[command], 1, ["set"], [0]);
-    //     })
+    describe('calling script', () => {
+        it('should create script on redis client and invoke it when its not registered, with passed parameters', async () => {
+            const command = 'some_command_name', scriptText = 'mock lua script', scriptFileAbsolutePath = 'filename.lua', poolSize = 1, token = Math.random().toString(), scriptKeys = ["a", "b", "c"], scriptValues = [1, 2, 3, 5];
+            const readFileStub = sinon.stub(fs.promises, 'readFile').resolves(scriptText);
+            const digestStub = { "digest": sinon.stub().returns(command) };
+            const updateStub = { "update": sinon.stub().returns(digestStub) };
+            const createHashStub = sinon.stub(crypto, "createHash").returns(updateStub as any);
+            const target = new IORedisClientPool(redisFactory, poolSize, fs, crypto);
+            redisFactory.returnValues[0][command] = sinon.stub();//Since this is a dynamic command created by ioredis setup it here.
 
-    //     it('should throw error when no token found in active redis client', async () => {
-    //         const error = new Error("Please acquire a client with proper token");
-    //         const command = 'encryptedtext', randomText = Math.random().toString();
-    //         const readFileStub = sinon.stub(fs.promises, 'readFile').resolves(randomText);
-    //         const md5Stub = sinon.stub(utils, 'MD5Hash').returns(command);
-    //         const redisClientStub = { defineCommand: sinon.stub(), [command]: sinon.stub().resolves() };
-    //         const redisStub = sinon.stub().returns(redisClientStub);
-    //         const poolSize = 5, token = Math.random().toString();
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         assert.rejects(async () => { await target.script(token, "filename.txt", ["set"], [0]) }, error);
-    //         const activeClientStub = redisStub.returnValues[redisStub.returnValues.length - 1];
-    //         sinon.assert.notCalled(readFileStub);
-    //         sinon.assert.notCalled(md5Stub);
-    //         sinon.assert.notCalled(activeClientStub.defineCommand);
-    //         sinon.assert.notCalled(activeClientStub[command]);
-    //     })
+            await target.acquire(token);
+            await target.script(token, scriptFileAbsolutePath, scriptKeys, scriptValues);
 
-    //     it('should not called redis client defineCommand method when command already being register', async () => {
-    //         const command = 'encryptedtext', randomText = Math.random().toString();
-    //         const readFileStub = sinon.stub(fs.promises, 'readFile').resolves(randomText);
-    //         const md5Stub = sinon.stub(utils, 'MD5Hash').returns(command);
-    //         const redisClientStub = { defineCommand: sinon.stub(), [command]: sinon.stub().resolves() };
-    //         const redisStub = sinon.stub().returns(redisClientStub);
-    //         const poolSize = 5, token = Math.random().toString();
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         await target.acquire(token);
-    //         await target.script(token, "filename.txt", ["set"], [0]);
-    //         const activeClientStub = redisStub.returnValues[redisStub.returnValues.length - 1];
-    //         sinon.assert.calledOnceWithExactly(readFileStub, "filename.txt", { encoding: "utf-8" });
-    //         sinon.assert.calledOnceWithExactly(md5Stub, randomText);
-    //         sinon.assert.calledOnceWithExactly(activeClientStub.defineCommand, command, { lua: randomText });
-    //         sinon.assert.calledOnceWithExactly(activeClientStub[command], 1, ["set"], [0]);
-    //         await target.script(token, "filename.txt", ["set"], [0]);  //same file name to get it from already registered file name
-    //         sinon.assert.calledTwice(activeClientStub[command]);
-    //         sinon.assert.calledOnceWithExactly(readFileStub, "filename.txt", { encoding: "utf-8" });
-    //         sinon.assert.calledOnceWithExactly(md5Stub, randomText);
-    //         sinon.assert.calledOnceWithExactly(activeClientStub.defineCommand, command, { lua: randomText });
-    //     })
+            sinon.assert.calledOnceWithExactly(readFileStub, scriptFileAbsolutePath, { encoding: "utf-8" });
+            sinon.assert.calledOnceWithExactly(createHashStub, "md5");
+            sinon.assert.calledOnceWithExactly(updateStub.update, scriptText);
+            sinon.assert.calledOnceWithExactly(digestStub.digest, "hex");
+            sinon.assert.calledOnceWithExactly(redisFactory.returnValues[0].defineCommand, command, { lua: scriptText });
+            sinon.assert.calledOnceWithExactly(redisFactory.returnValues[0][command], scriptKeys.length, scriptKeys, scriptValues);
+        })
 
-    //     it('should not called redis client command and defineCommand method when file read throws exception', async () => {
-    //         const command = 'encryptedtext', error = new Error("Something went wrong");
-    //         const readFileStub = sinon.stub(fs.promises, 'readFile').throwsException(error);
-    //         const md5Stub = sinon.stub(utils, 'MD5Hash').returns(command);
-    //         const redisClientStub = { defineCommand: sinon.stub(), [command]: sinon.stub().resolves() };
-    //         const redisStub = sinon.stub().returns(redisClientStub);
-    //         const poolSize = 5, token = Math.random().toString();
-    //         const target = new IORedisClientPool(redisStub, poolSize);
-    //         assert.strictEqual(redisStub.callCount, poolSize);
-    //         await target.acquire(token);
-    //         assert.rejects(async () => { await target.script(token, "filename.txt", ["set"], [0]) }, error);
-    //         const activeClientStub = redisStub.returnValues[redisStub.returnValues.length - 1];
-    //         sinon.assert.calledOnceWithExactly(readFileStub, "filename.txt", { encoding: "utf-8" });
-    //         sinon.assert.notCalled(md5Stub);
-    //         sinon.assert.notCalled(activeClientStub.defineCommand);
-    //         sinon.assert.notCalled(activeClientStub[command]);
-    //     })
-    // })
+        it('should not re-define command when command is previously register', async () => {
+            const command = 'some_command_name', scriptText = 'mock lua script', scriptFileAbsolutePath = 'filename.lua', poolSize = 1, token = Math.random().toString(), scriptKeys = ["a", "b", "c"], scriptValues = [1, 2, 3, 5];
+            const readFileStub = sinon.stub(fs.promises, 'readFile').resolves(scriptText);
+            const digestStub = { "digest": sinon.stub().returns(command) };
+            const updateStub = { "update": sinon.stub().returns(digestStub) };
+            const createHashStub = sinon.stub(crypto, "createHash").returns(updateStub as any);
+            const target = new IORedisClientPool(redisFactory, poolSize, fs, crypto);
+            redisFactory.returnValues[0][command] = sinon.stub();//Since this is a dynamic command created by ioredis setup it here.
+
+            await target.acquire(token);
+            await target.script(token, scriptFileAbsolutePath, scriptKeys, scriptValues);
+            await target.script(token, scriptFileAbsolutePath, scriptKeys, scriptValues);
+
+            sinon.assert.calledOnceWithExactly(readFileStub, scriptFileAbsolutePath, { encoding: "utf-8" });
+            sinon.assert.calledOnceWithExactly(createHashStub, "md5");
+            sinon.assert.calledOnceWithExactly(updateStub.update, scriptText);
+            sinon.assert.calledOnceWithExactly(digestStub.digest, "hex");
+            sinon.assert.calledOnceWithExactly(redisFactory.returnValues[0].defineCommand, command, { lua: scriptText });
+            sinon.assert.calledTwice(redisFactory.returnValues[0][command]);
+            sinon.assert.calledWithExactly(redisFactory.returnValues[0][command], scriptKeys.length, scriptKeys, scriptValues);
+        })
+
+        it('should throw error when no token is acquired before calling', async () => {
+            const error = new Error("Please acquire a client with proper token");
+            const command = 'some_command_name', scriptText = 'mock lua script', scriptFileAbsolutePath = 'filename.lua', poolSize = 1, token = Math.random().toString(), scriptKeys = ["a", "b", "c"], scriptValues = [1, 2, 3, 5];
+            const readFileStub = sinon.stub(fs.promises, 'readFile').resolves(scriptText);
+            const digestStub = { "digest": sinon.stub().returns(command) };
+            const updateStub = { "update": sinon.stub().returns(digestStub) };
+            const createHashStub = sinon.stub(crypto, "createHash").returns(updateStub as any);
+            const target = new IORedisClientPool(redisFactory, poolSize, fs, crypto);
+            redisFactory.returnValues[0][command] = sinon.stub();//Since this is a dynamic command created by ioredis setup it here.
+
+            await assert.rejects(target.script(token, scriptFileAbsolutePath, scriptKeys, scriptValues), error);
+
+            sinon.assert.notCalled(readFileStub);
+            sinon.assert.notCalled(createHashStub);
+            sinon.assert.notCalled(updateStub.update);
+            sinon.assert.notCalled(digestStub.digest);
+            sinon.assert.notCalled(redisFactory.returnValues[0].defineCommand);
+            sinon.assert.notCalled(redisFactory.returnValues[0][command]);
+        })
+
+    })
 
     // describe('RedisClientClusterFactory', () => {
     //     it('should throw error when no connection details are pass in param', () => {
@@ -462,17 +415,5 @@ describe('RedisClientPool', () => {
     //     })
     // })
 
-    describe('calling generateUniqueToken', () => {
-        it('should return unique token with prefix provided', () => {
-            const prefix = "task";
-            const target = new IORedisClientPool(redisFactory, 0);
-            const result1 = target.generateUniqueToken(prefix);
-            const result2 = target.generateUniqueToken(prefix);
-            assert.strictEqual(result1.length > (prefix.length + 1), true);
-            assert.strictEqual(result1.split("-")[0], prefix);
-            assert.strictEqual(result2.length > (prefix.length + 1), true);
-            assert.strictEqual(result2.split("-")[0], prefix);
-            assert.notStrictEqual(result1, result2);
-        })
-    })
+
 });
