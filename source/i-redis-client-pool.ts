@@ -27,17 +27,18 @@ export interface IRedisClientPool {
      * This method is used to execute a set of commands in one go sequentially on redis side.
      * @param token token string which was used to acquire.
      * @param commands Array of array of strings including multiple commands and arguments that needs to be executed in one trip to the server sequentially. Eg:[["set","key","value"],["get","key"]]
+     * @param transaction Boolean value to indicate if to run the commands as transaction on redis or just run them close to each other.
      * @returns Promise of all results in the commands(any type).
      */
-    pipeline(token: string, commands: string[][]): Promise<any>;
+    pipeline(token: string, commands: string[][], transaction: boolean): Promise<any>;
     /**
      * This method is used to execute a lua script on redis connection.
      * @param token token string which was used to acquire.
-     * @param filename Full file path of the lua script to be executed Eg: path.join(__dirname, "script.lua")
+     * @param filePath Full file path of the lua script to be executed Eg: path.join(__dirname, "script.lua")
      * @param keys Array of strings, Keys to be passsed to the script. 
      * @param args Array of strings, Arguments to be passed to the script.
      */
-    script(token: string, filename: string, keys: string[], args: string[]): Promise<any>
+    script(token: string, filePath: string, keys: string[], args: string[]): Promise<any>
 
     /**
      * This method should provide unique token for a given prefix.

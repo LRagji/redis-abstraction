@@ -85,18 +85,18 @@ export class IORedisClientPool implements IRedisClientPool {
         });
     }
 
-    public async script(token: string, filename: string, keys: string[], args: any[]) {
+    public async script(token: string, filePath: string, keys: string[], args: any[]) {
         const redisClient = this.activeRedisClients.get(token);
         if (redisClient == undefined) {
             throw new Error("Please acquire a client with proper token");
         }
-        let command = this.filenameToCommand.get(filename);
+        let command = this.filenameToCommand.get(filePath);
         // @ts-ignore
         if (command == null || redisClient[command] == null) {
-            const contents = await this.nodeFSModule.promises.readFile(filename, { encoding: "utf-8" });
+            const contents = await this.nodeFSModule.promises.readFile(filePath, { encoding: "utf-8" });
             command = this.MD5Hash(contents);
             redisClient.defineCommand(command, { lua: contents });
-            this.filenameToCommand.set(filename, command);
+            this.filenameToCommand.set(filePath, command);
         }
         // @ts-ignore
         return await redisClient[command](keys.length, keys, args);
