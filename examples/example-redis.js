@@ -1,16 +1,9 @@
-import Redis, { Cluster } from "ioredis";
-import { IORedisClientPool } from '../dist/index.js';
-
-function parseRedisConnectionString(connectionString) {
-    //Used to parse the connection string and return components of the same 
-    //Refer:ioredis/built/utils/index.js parseURL function for more details
-    //This is just a mock implementation, you can enhance it as per your needs.
-    return {
-        password: ""
-    };
-}
+import { createClient } from "redis";
+import { RedisClientPool } from '../dist/index.js';
 
 async function main(pool) {
+    //Initialize the pool (establish connections)
+    await pool.initialize();
 
     //Generates a unique token
     const token = pool.generateUniqueToken('Test');
@@ -18,7 +11,7 @@ async function main(pool) {
         //Acquire connection from the pool
         await pool.acquire(token);
         //Execute the command on the acquired connection
-        await pool.run(token, ['set', 'key', 'value']);
+        await pool.run(token, ['set', 'key', 'hello from node-redis']);
         //Execute some more
         const something = await pool.run(token, ['get', 'key']);
         console.log(something);
@@ -31,11 +24,11 @@ async function main(pool) {
 }
 
 //Define the redis connection string
-const singleNodeRedisConnectionString = 'rediss://redis.my-service.com';
+const singleNodeRedisConnectionString = 'redis://localhost:6379'//'rediss://redis.my-service.com';
 //Create a injector function for creating redis connection instances.
-const connectionInjector = () => IORedisClientPool.IORedisClientClusterFactory([singleNodeRedisConnectionString], Redis, Cluster, parseRedisConnectionString);
+const connectionInjector = () => createClient({ url: singleNodeRedisConnectionString });
 //Initialize the pool
-const pool = new IORedisClientPool(connectionInjector);
+const pool = new RedisClientPool(connectionInjector);
 
 //Pass it around in the application.
 main(pool)

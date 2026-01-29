@@ -18,6 +18,11 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
         this.activeRedisClients = new Map<string, redisConnectionType>();
     }
 
+    public async initialize(): Promise<void> {
+        const initHandles = this.poolRedisClients.map(async _ => { await _.connect(); });
+        await Promise.allSettled(initHandles);
+    }
+
     public async acquire(token: string): Promise<void> {
         if (!this.activeRedisClients.has(token)) {
             const availableClient = this.poolRedisClients.pop() || (() => { this.totalConnectionCounter += 1; return this.redisConnectionCreator(); })();
@@ -55,11 +60,8 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
         if (redisClient == undefined) {
             throw new Error("Please acquire a client with proper token");
         }
-        const commandName = commandArgs.shift();
-        if (commandName === undefined) {
-            throw new Error("No command specified");
-        }
-        return await redisClient.sendCommand(commandName, ...commandArgs);
+
+        return await redisClient.sendCommand(commandArgs);
     }
 
     public async pipeline(token: string, commands: string[][], transaction: boolean): Promise<any> {

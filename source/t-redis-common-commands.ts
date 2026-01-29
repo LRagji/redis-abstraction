@@ -1,10 +1,11 @@
 
 interface IRedisRequiredCommands {
     quit(): Promise<void>;
+    connect(): Promise<void>;
     disconnect(): void;
     multi(commands: string[][]): this;
     exec(): Promise<(Error | null | any)[] | null>;
-    sendCommand(commandName: string, ...args: any[]): Promise<any>;
+    sendCommand(args: any[]): Promise<any>;
 }
 
 type TExclusion<T> = {
