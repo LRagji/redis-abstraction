@@ -4,7 +4,7 @@ A Redis client pool with abstraction to different Redis libraries.
 This package helps to create redis connections in a connection pool fashion, ideally redis is single threaded so multiple connection or a connection pool for simple commands may not make sense, but there are some conditions in which connection pool makes sense like blocking commands, pub-sub commands etc apart form these cases there are also some fringe cases where if you have a simple command with a lot of data to be serialized on wire/network here multiple connections make sense as redis execution is single threaded but its I/O stack is multi so another command which has relatively small data to be serialized on wire gets stuck behind this big network transfer command ahead of it, It can take advantage of another connection where there is not que before-hand and get executed first in such a case connection pools make sense. This package also supports cluster mode connections.
 
 Working of this package is simple it exposes an interface [i-redis-client-pool](https://github.com/LRagji/redis-abstraction/blob/main/source/i-redis-client-pool.ts) which has following methods 
-1. `acquire(token: string): Promise<void>` : Responsibile to acquire a connection to redis server in-reference to the unique token provided.
+1. `acquire(token: string): Promise<void>` : Responsible to acquire a connection to redis server in-reference to the unique token provided.
 2. `run(token: string, commandArgs: string[]): Promise<any>` : Responsible to run a redis command in-reference to the unique token acquired before.
 3. `release(token: string): Promise<void>` : Responsible to release the acquired connection back into connection pool in-reference to the unique token acquired before.
 
@@ -31,10 +31,19 @@ Currently this package only supports ioredis as underneath client library, but i
 ### Non Cluster Initialization
 
 ```javascript
+//Function which can decompose the connection string into different components like hostname,password etc.
+function parseRedisConnectionString(connectionString) {
+    //Used to parse the connection string and return components of the same 
+    //Refer:ioredis/built/utils/index.js parseURL function for more details
+    //This is just a mock implementation, you can enhance it as per your needs.
+    return {
+        password: ""
+    };
+}
 //Define the redis connection string
 const singleNodeRedisConnectionString = 'rediss://redis.my-service.com';
 //Create a injector function for creating redis connection instance.
-const connectionInjector = () => IORedisClientPool.IORedisClientClusterFactory([singleNodeRedisConnectionString]);
+const connectionInjector = () => IORedisClientPool.IORedisClientClusterFactory([singleNodeRedisConnectionString], Redis, Cluster, parseRedisConnectionString);
 //Initialize the pool
 const pool = new IORedisClientPool(connectionInjector);
 
@@ -52,7 +61,8 @@ main(pool)
 const clusteredRedisConnectionStringPrimary = 'rediss://redis.my-service.com';
 const clusteredRedisConnectionStringSecondary = 'rediss://redis.my-service.com' || clusteredRedisConnectionStringPrimary; //Secondary is optional if not present pass in primary connection.
 //Create a injector function for creating redis connection instance.
-const connectionInjector = () => IORedisClientPool.IORedisClientClusterFactory([clusteredRedisConnectionStringPrimary,clusteredRedisConnectionStringSecondary]);//Passing more than one connection string indicates its a cluster setup.
+//Passing more than one connection string indicates its a cluster setup.
+const connectionInjector = () => IORedisClientPool.IORedisClientClusterFactory([clusteredRedisConnectionStringPrimary,clusteredRedisConnectionStringSecondary], Redis, Cluster, parseRedisConnectionString);
 //Initialize the pool
 const pool = new IORedisClientPool(connectionInjector);
 
@@ -93,4 +103,4 @@ main(pool)
 
 ## License
 
-This project is contrubution to public domain and completely free for use, view [LICENSE.md](/license.md) file for details.
+This project is contribution to public domain and completely free for use, view [LICENSE.md](/license.md) file for details.
