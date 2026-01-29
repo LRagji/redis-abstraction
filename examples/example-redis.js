@@ -11,7 +11,7 @@ async function main(pool) {
         //Acquire connection from the pool
         await pool.acquire(token);
         //Execute the command on the acquired connection
-        await pool.run(token, ['set', 'key', 'hello from node-redis']);
+        await pool.run(token, ['set', 'key', `hello from node-redis @ ${new Date().toISOString()}`]);
         //Execute some more
         const something = await pool.run(token, ['get', 'key']);
         console.log(something);
@@ -24,7 +24,7 @@ async function main(pool) {
 }
 
 //Define the redis connection string
-const singleNodeRedisConnectionString = 'redis://localhost:6379'//'rediss://redis.my-service.com';
+const singleNodeRedisConnectionString = 'redis://localhost:6379';
 //Create a injector function for creating redis connection instances.
 const connectionInjector = () => createClient({ url: singleNodeRedisConnectionString });
 //Initialize the pool
