@@ -8,10 +8,10 @@ import assert from 'node:assert/strict';
 import * as LUT from '../dist/index.js';
 
 let redisContainer1: tc.StartedTestContainer;
-let nodeRedisPool: LUT.RedisClientPool<LUT.TRedisCommonCommands>;
+let nodeRedisPool: LUT.IRedisClientPool;
 
 let redisContainer2: tc.StartedTestContainer;
-let ioRedisPool: LUT.IORedisClientPool<LUT.TIORedisCommonCommands>;
+let ioRedisPool: LUT.IRedisClientPool;
 
 function parseRedisConnectionString(connectionString: string) {
     //Used to parse the connection string and return components of the same 
@@ -29,7 +29,7 @@ before(async () => {
     const singleNodeRedisConnectionString1 = `redis://${redisContainer1.getHost()}:${redisContainer1.getMappedPort(6379)}`;
     const connectionInjector1 = () => createClient({ url: singleNodeRedisConnectionString1 });
     nodeRedisPool = new LUT.RedisClientPool<LUT.TRedisCommonCommands>(connectionInjector1 as any);
-    await nodeRedisPool.initialize();
+    await (nodeRedisPool as LUT.RedisClientPool<LUT.TRedisCommonCommands>).initialize();
 
     redisContainer2 = await new tc.GenericContainer('redis')
         .withExposedPorts(6379)
