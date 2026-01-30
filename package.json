@@ -42,7 +42,7 @@
     "@types/mocha": "^10.0.10",
     "@types/sinon": "^21.0.0",
     "cross-env": "^10.1.0",
-    "mocha": "^11.7.5",
+    "mocha": "^11.3.0",
     "nyc": "^17.1.0",
     "run-script-os": "^1.1.6",
     "sinon": "^21.0.1",
