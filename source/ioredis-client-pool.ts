@@ -77,8 +77,8 @@ export class IORedisClientPool<redisConnectionType extends TIORedisCommonCommand
         if (redisClient == undefined) {
             throw new Error("Please acquire a client with proper token");
         }
-        const result = transaction === true ? await redisClient.multi(commands).exec() : await redisClient.pipeline(commands).exec();
-        return result?.map(r => {
+        const result = (transaction === true ? await redisClient.multi(commands).exec() : await redisClient.pipeline(commands).exec()) ?? [];
+        return result.map(r => {
             let err = r[0];
             if (err != null) {
                 throw err;

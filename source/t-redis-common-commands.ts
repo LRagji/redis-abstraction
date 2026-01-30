@@ -1,10 +1,11 @@
 
 interface IRedisRequiredCommands {
-    quit(): Promise<void>;
+    close(): Promise<void>;
     connect(): Promise<void>;
-    disconnect(): void;
-    multi(commands: string[][]): this;
+    destroy(): void;
+    multi(): this;
     exec(): Promise<(Error | null | any)[] | null>;
+    execAsPipeline(): Promise<(Error | null | any)[] | null>;
     sendCommand(args: any[]): Promise<any>;
 }
 

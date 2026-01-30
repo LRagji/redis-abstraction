@@ -40,14 +40,14 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
             this.poolRedisClients.push(releasedClient);
         }
         else {
-            await releasedClient.quit();
-            releasedClient.disconnect();
+            await releasedClient.close();
+            releasedClient.destroy();
         }
     }
 
     public async shutdown(): Promise<void> {
         const waitHandles = [...this.poolRedisClients, ...Array.from(this.activeRedisClients.values())]
-            .map(async _ => { await _.quit(); _.disconnect(); });
+            .map(async _ => { await _.close(); _.destroy(); });
         await Promise.allSettled(waitHandles);
 
         this.poolRedisClients = [];
@@ -65,34 +65,18 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
     }
 
     public async pipeline(token: string, commands: string[][], transaction: boolean): Promise<any> {
+
         const redisClient = this.activeRedisClients.get(token);
         if (redisClient == undefined) {
             throw new Error("Please acquire a client with proper token");
         }
-
-        let results = [];
-        if (transaction === true) {
-            const multiResults = await redisClient.multi(commands).exec()
-            if (Array.isArray(multiResults) === false) {
-                throw new Error("Transaction execution failed");
-            }
-            results = multiResults;
+        const transactionContext = redisClient.multi();
+        for (const cmd of commands) {
+            const commandName = (cmd.shift() ?? "").toLowerCase();
+            // @ts-ignore
+            transactionContext[commandName](...cmd);
         }
-        else {
-            const resultHandles = [];
-            for (const cmd of commands) {
-                resultHandles.push(this.run(token, cmd));
-            }
-            results = await Promise.all(resultHandles);
-        }
-
-        return results?.map(r => {
-            let err = r[0];
-            if (err != null) {
-                throw err;
-            }
-            return r[1];
-        });
+        return transaction === true ? await transactionContext.exec() : await transactionContext.execAsPipeline();
     }
 
     public script(token: string, filePath: string, keys: string[], args: string[]): Promise<any> {
