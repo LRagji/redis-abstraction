@@ -4,7 +4,7 @@ import { IORedisClientPool } from '../source/index';
 import crypto from 'node:crypto';
 import fs from 'fs';
 
-describe('RedisClientPool', () => {
+describe('IORedisClientPool', () => {
 
     let redisFactory: sinon.SinonStub;
     const multiResult = "MMockResult";

@@ -26,6 +26,10 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
     public async acquire(token: string): Promise<void> {
         if (!this.activeRedisClients.has(token)) {
             const availableClient = this.poolRedisClients.pop() || (() => { this.totalConnectionCounter += 1; return this.redisConnectionCreator(); })();
+            if (((availableClient.isOpen as unknown as boolean) && (availableClient.isReady as unknown as boolean)) === false) {
+                //For some reason the new Redis client closes connection if the connection is left idle for a while. So we need to check if the connection is open before using it.
+                await availableClient.connect();
+            }
             this.activeRedisClients.set(token, availableClient);
         }
     }
