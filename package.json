@@ -1,6 +1,6 @@
 {
   "name": "redis-abstraction",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A Redis client pool with abstraction to different Redis libraries.",
   "main": "index.js",
   "scripts": {
