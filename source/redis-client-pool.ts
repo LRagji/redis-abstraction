@@ -44,14 +44,26 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
             this.poolRedisClients.push(releasedClient);
         }
         else {
-            await releasedClient.close();
-            releasedClient.destroy();
+            await this.closeClient(releasedClient);
+        }
+    }
+
+    private async closeClient(client: redisConnectionType): Promise<void> {
+
+        if (typeof client.quit === "function") {
+            await client.quit();
+        }
+        if (typeof client.close === "function") {
+            await client.close();
+        }
+        if (typeof client.destroy === "function") {
+            await client.destroy();
         }
     }
 
     public async shutdown(): Promise<void> {
         const waitHandles = [...this.poolRedisClients, ...Array.from(this.activeRedisClients.values())]
-            .map(async _ => { await _.close(); _.destroy(); });
+            .map(async _ => this.closeClient(_));
         await Promise.allSettled(waitHandles);
 
         this.poolRedisClients = [];

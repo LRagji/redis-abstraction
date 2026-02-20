@@ -1,5 +1,6 @@
 
 interface IRedisRequiredCommands {
+    quit(): Promise<void>;
     close(): Promise<void>;
     connect(): Promise<void>;
     destroy(): void;
