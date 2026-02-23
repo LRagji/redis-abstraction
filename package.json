@@ -26,7 +26,7 @@
     "url": "git+https://github.com/LRagji/redis-abstraction.git"
   },
   "author": "Laukik",
-  "license": "SEE LICENSE IN license.md",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/LRagji/redis-abstraction/issues"
   },
