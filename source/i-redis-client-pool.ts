@@ -46,4 +46,9 @@ export interface IRedisClientPool {
      */
     generateUniqueToken(prefix: string): string;
 
+    /**
+     * This method should initialize the pool and all the required resources before acquiring any client. Call this method before calling any method.
+     */
+    initialize(): Promise<void>;
+
 }

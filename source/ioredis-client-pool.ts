@@ -28,6 +28,11 @@ export class IORedisClientPool<redisConnectionType extends TIORedisCommonCommand
         this.idlePoolSize = idlePoolSize;
     }
 
+    public initialize(): Promise<void> {
+        // ioredis creates connection lazily on first command, so we don't need to do anything here.
+        return Promise.resolve();
+    }
+
     public generateUniqueToken(prefix: string) {
         return `${prefix}-${this.nodeCryptoModule.randomUUID()}`;
     }
