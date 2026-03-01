@@ -1,6 +1,6 @@
 {
   "name": "redis-abstraction",
-  "version": "1.0.11",
+  "version": "2.0.11",
   "description": "A Redis client pool with abstraction to different Redis libraries.",
   "main": "index.js",
   "scripts": {
@@ -13,7 +13,7 @@
     "clean-build:linux": "rm -rf ./dist/",
     "clean-build:windows": "rmdir /s /q .\\dist\\",
     "test-run": "nyc --reporter=html --reporter=text mocha -r ts-node/register ./tests/**/*.ts",
-    "test": "npm run build && npm run test-run",
+    "test": "npm run build && npm run test-run && cd ./integration-test && npm install && npm run test && cd ..",
     "build": "(npm run clean-build || node -v) && tsc && npm run copy-files && npm run docs",
     "redisstop": "docker stop TestCentralStore && ping 127.0.0.1 -c 3",
     "redisstart": "(npm run redisstop || docker -v ) && docker run --name TestCentralStore -v ${PWD}:\"/var/lib/luatest\" -p 6379:6379 -itd --rm redis:latest",

@@ -88,9 +88,8 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
         }
         const transactionContext = redisClient.multi();
         for (const cmd of commands) {
-            const commandName = (cmd.shift() ?? "").toUpperCase();
             // @ts-ignore
-            transactionContext[commandName](...cmd);
+            transactionContext.addCommand(cmd);
         }
         return transaction === true ? await transactionContext.exec() : await transactionContext.execAsPipeline();
     }
