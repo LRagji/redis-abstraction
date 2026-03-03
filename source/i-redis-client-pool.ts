@@ -13,8 +13,9 @@ export interface IRedisClientPool {
      */
     release(token: string): Promise<void>
     /**
-     * Signals a dispose method to the pool stating no more clients will be needed, donot call any methods post calling shutdown. 
+     * Signals a dispose method to the pool stating no more clients will be needed, do not call any methods post calling shutdown. 
      */
+    [Symbol.asyncDispose](): Promise<void>;
     shutdown(): Promise<void>
     /**
      * Executes a single command on acquired connection.

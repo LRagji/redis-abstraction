@@ -101,4 +101,8 @@ export class RedisClientPool<redisConnectionType extends TRedisCommonCommands> i
     public generateUniqueToken(prefix: string): string {
         return `${prefix}-${this.nodeCryptoModule.randomUUID()}`;
     }
+
+    public [Symbol.asyncDispose](): Promise<void> {
+        return this.shutdown();
+    }
 }

@@ -145,4 +145,8 @@ export class IORedisClientPool<redisConnectionType extends TIORedisCommonCommand
             return instanceInjection<TIORedisCommonCommands>(redisClass, [connectionDetails[0]]);
         }
     }
+
+    public [Symbol.asyncDispose](): Promise<void> {
+        return this.shutdown();
+    }
 }
